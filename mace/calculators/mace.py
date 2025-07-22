@@ -376,6 +376,3 @@ class MACECalculator(Calculator):
         if self.num_models == 1:
             return descriptors[0]
         return descriptors
-                                                                                                             376,9         Bot
-
-
