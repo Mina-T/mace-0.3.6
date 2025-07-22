@@ -36,6 +36,8 @@ class AtomicData(torch_geometric.data.Data):
     stress: torch.Tensor
     virials: torch.Tensor
     dipole: torch.Tensor
+    category: torch.Tensor
+    atom_id: torch.Tensor
     charges: torch.Tensor
     weight: torch.Tensor
     energy_weight: torch.Tensor
@@ -61,6 +63,8 @@ class AtomicData(torch_geometric.data.Data):
         stress: Optional[torch.Tensor],  # [1,3,3]
         virials: Optional[torch.Tensor],  # [1,3,3]
         dipole: Optional[torch.Tensor],  # [, 3]
+        category: Optional[torch.Tensor],
+        atom_id: Optional[torch.Tensor],
         charges: Optional[torch.Tensor],  # [n_nodes, ]
     ):
         # Check shapes
@@ -102,6 +106,8 @@ class AtomicData(torch_geometric.data.Data):
             "stress": stress,
             "virials": virials,
             "dipole": dipole,
+            "category": category,
+            "atom_id": atom_id,
             "charges": charges,
         }
         super().__init__(**data)
@@ -186,6 +192,16 @@ class AtomicData(torch_geometric.data.Data):
             if config.dipole is not None
             else None
         )
+        category = (
+            torch.tensor(config.category)
+            if config.category is not None
+            else None
+        )
+        atom_id = (
+            torch.tensor(config.atom_id)
+            if config.atom_id is not None
+            else None
+        )
         charges = (
             torch.tensor(config.charges, dtype=torch.get_default_dtype())
             if config.charges is not None
@@ -209,6 +225,8 @@ class AtomicData(torch_geometric.data.Data):
             stress=stress,
             virials=virials,
             dipole=dipole,
+            category = category,
+            atom_id = atom_id,
             charges=charges,
         )
 

@@ -206,6 +206,7 @@ class MACECalculator(Calculator):
             drop_last=False,
         )
         batch = next(iter(data_loader)).to(self.device)
+        print(batch, flush = True)
         return batch
 
     def _clone_batch(self, batch):
@@ -348,7 +349,10 @@ class MACECalculator(Calculator):
         if num_layers == -1:
             num_layers = int(self.models[0].num_interactions)
         batch = self._atoms_to_batch(atoms)
-        descriptors = [model(batch.to_dict())["node_feats"] for model in self.models]
+        batch_dict = batch.to_dict()
+        category_id = batch_dict['category']
+        atom_ids = batch_dict['atom_id']
+        descriptors = [model(batch_dict)["node_feats"] for model in self.models]
         if invariants_only:
             irreps_out = self.models[0].products[0].linear.__dict__["irreps_out"]
             l_max = irreps_out.lmax
@@ -362,8 +366,16 @@ class MACECalculator(Calculator):
                 )
                 for descriptor in descriptors
             ]
-        descriptors = [descriptor.detach().cpu().numpy() for descriptor in descriptors]
+        _descriptors = [descriptor.detach().cpu().numpy() for descriptor in descriptors]
+        descriptors = []
+        for descriptor in _descriptors:
+            category_column = np.full((descriptor.shape[0], 1), category_id.item())
+            new_descriptor = np.concatenate([descriptor, category_column], axis=1)
+            descriptors.append(new_descriptor)
 
         if self.num_models == 1:
             return descriptors[0]
         return descriptors
+                                                                                                             376,9         Bot
+
+

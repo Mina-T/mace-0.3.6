@@ -23,9 +23,19 @@ Virials = np.ndarray  # [6, ], [3,3], [9, ]
 Charges = np.ndarray  # [..., 1]
 Cell = np.ndarray  # [3,3]
 Pbc = tuple  # (3,)
+category = int
+atom_id = np.ndarray
 
 DEFAULT_CONFIG_TYPE = "Default"
 DEFAULT_CONFIG_TYPE_WEIGHTS = {DEFAULT_CONFIG_TYPE: 1.0}
+
+def get_drautz_label(key):
+    categories = {'cluster':1, 'sp2':2, 'sp3':3, 'bulk':4, 'amorph':5}
+    for cat in categories.keys():
+        if cat in key:
+            return categories[cat]
+        else:
+            continue
 
 
 @dataclass
@@ -37,6 +47,8 @@ class Configuration:
     stress: Optional[Stress] = None  # eV/Angstrom^3
     virials: Optional[Virials] = None  # eV
     dipole: Optional[Vector] = None  # Debye
+    category : Optional[category] = None
+    atom_id : Optional[atom_id] = None
     charges: Optional[Charges] = None  # atomic unit
     cell: Optional[Cell] = None
     pbc: Optional[Pbc] = None
@@ -77,6 +89,8 @@ def config_from_atoms_list(
     stress_key="stress",
     virials_key="virials",
     dipole_key="dipole",
+    category_key = "category",
+    atom_id_key = "atom_id",
     charges_key="charges",
     config_type_weights: Dict[str, float] = None,
 ) -> Configurations:
@@ -86,6 +100,7 @@ def config_from_atoms_list(
 
     all_configs = []
     for atoms in atoms_list:
+        sys_idx = atoms_list.index(atoms)
         all_configs.append(
             config_from_atoms(
                 atoms,
@@ -94,8 +109,11 @@ def config_from_atoms_list(
                 stress_key=stress_key,
                 virials_key=virials_key,
                 dipole_key=dipole_key,
+                category_key = category_key,
+                atom_id_key = atom_id_key,
                 charges_key=charges_key,
                 config_type_weights=config_type_weights,
+                sys_idx = sys_idx
             )
         )
     return all_configs
@@ -108,23 +126,32 @@ def config_from_atoms(
     stress_key="stress",
     virials_key="virials",
     dipole_key="dipole",
+    category_key = "category",
+    atom_id_key = "atom_id",
     charges_key="charges",
     config_type_weights: Dict[str, float] = None,
+    sys_idx = sys_idx
 ) -> Configuration:
     """Convert ase.Atoms to Configuration"""
     if config_type_weights is None:
         config_type_weights = DEFAULT_CONFIG_TYPE_WEIGHTS
 
-    energy = atoms.info.get(energy_key, None)  # eV
+    try:
+        energy = atoms.get_total_energy()
+    except AttributeError:
+        energy = atoms.info.get(energy_key, None)  # eV
     forces = atoms.arrays.get(forces_key, None)  # eV / Ang
     stress = atoms.info.get(stress_key, None)  # eV / Ang ^ 3
     virials = atoms.info.get(virials_key, None)
     dipole = atoms.info.get(dipole_key, None)  # Debye
-    # Charges default to 0 instead of None if not found
+    cat_key = atoms.info.get(category_key)
+    category = get_drautz_label(cat_key)
     charges = atoms.arrays.get(charges_key, np.zeros(len(atoms)))  # atomic unit
     atomic_numbers = np.array(
         [ase.data.atomic_numbers[symbol] for symbol in atoms.symbols]
-    )
+    ) 
+    atom_id = np.array([str(sys_idx) + str(i) for i in range(len(atomic_numbers))])
+    # Charges default to 0 instead of None if not found
     pbc = tuple(atoms.get_pbc())
     cell = np.array(atoms.get_cell())
     config_type = atoms.info.get("config_type", "Default")
@@ -161,6 +188,8 @@ def config_from_atoms(
         stress=stress,
         virials=virials,
         dipole=dipole,
+        category = category,
+        atom_id = atom_id,
         charges=charges,
         weight=weight,
         energy_weight=energy_weight,
@@ -272,6 +301,8 @@ def load_from_xyz(
         stress_key=stress_key,
         virials_key=virials_key,
         dipole_key=dipole_key,
+        category_key = category_key,
+        atom_id = atom_id_key,
         charges_key=charges_key,
     )
     return atomic_energies_dict, configs
