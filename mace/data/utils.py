@@ -100,7 +100,6 @@ def config_from_atoms_list(
 
     all_configs = []
     for atoms in atoms_list:
-        sys_idx = atoms_list.index(atoms)
         all_configs.append(
             config_from_atoms(
                 atoms,
@@ -113,8 +112,7 @@ def config_from_atoms_list(
                 atom_id_key = atom_id_key,
                 charges_key=charges_key,
                 config_type_weights=config_type_weights,
-                sys_idx = sys_idx
-            )
+                            )
         )
     return all_configs
 
@@ -130,9 +128,9 @@ def config_from_atoms(
     atom_id_key = "atom_id",
     charges_key="charges",
     config_type_weights: Dict[str, float] = None,
-    sys_idx = sys_idx
 ) -> Configuration:
     """Convert ase.Atoms to Configuration"""
+
     if config_type_weights is None:
         config_type_weights = DEFAULT_CONFIG_TYPE_WEIGHTS
 
@@ -150,7 +148,7 @@ def config_from_atoms(
     atomic_numbers = np.array(
         [ase.data.atomic_numbers[symbol] for symbol in atoms.symbols]
     ) 
-    atom_id = np.array([str(sys_idx) + str(i) for i in range(len(atomic_numbers))])
+    atom_id = np.array([i for i in range(len(atomic_numbers))])
     # Charges default to 0 instead of None if not found
     pbc = tuple(atoms.get_pbc())
     cell = np.array(atoms.get_cell())

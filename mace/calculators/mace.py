@@ -206,7 +206,6 @@ class MACECalculator(Calculator):
             drop_last=False,
         )
         batch = next(iter(data_loader)).to(self.device)
-        print(batch, flush = True)
         return batch
 
     def _clone_batch(self, batch):
@@ -351,7 +350,10 @@ class MACECalculator(Calculator):
         batch = self._atoms_to_batch(atoms)
         batch_dict = batch.to_dict()
         category_id = batch_dict['category']
+        category_id = category_id.detach().cpu().numpy()
         atom_ids = batch_dict['atom_id']
+        atom_ids = atom_ids.reshape(-1, 1) 
+        atom_ids = atom_ids.detach().cpu().numpy()
         descriptors = [model(batch_dict)["node_feats"] for model in self.models]
         if invariants_only:
             irreps_out = self.models[0].products[0].linear.__dict__["irreps_out"]
@@ -368,9 +370,9 @@ class MACECalculator(Calculator):
             ]
         _descriptors = [descriptor.detach().cpu().numpy() for descriptor in descriptors]
         descriptors = []
-        for descriptor in _descriptors:
-            category_column = np.full((descriptor.shape[0], 1), category_id.item())
-            new_descriptor = np.concatenate([descriptor, category_column], axis=1)
+        for i, descriptor in enumerate(_descriptors):
+            cat_column = np.full((descriptor.shape[0], 1), category_id[0])
+            new_descriptor = np.hstack([descriptor, cat_column, atom_ids])
             descriptors.append(new_descriptor)
 
         if self.num_models == 1:
